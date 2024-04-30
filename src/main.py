@@ -13,12 +13,15 @@ from config import (
     snake_head_color,
 )
 
+ONE = np.ones((2,), dtype=np.uint16)
+BORDER = border_size * ONE
+
 
 class GameState:
     def __init__(self, p_grid_size: tuple[int, int]):
-        self.grid_size = np.array(p_grid_size, dtype=np.int16)
-        self.snake = np.array([[0, 0], [0, 1]], dtype=np.int16)
-        self.food_location = np.array([0, 0], dtype=np.int16)
+        self.grid_size = np.array(p_grid_size, dtype=np.uint16)
+        self.snake = np.array([[0, 0], [0, 1]], dtype=np.uint16)
+        self.food_location = np.array([0, 0], dtype=np.uint16)
         self.direction: Literal["up", "down", "left", "right"] = "right"
         self.win_state: Literal["pending", "win", "loose"] = "pending"
         self.update_food()
@@ -26,7 +29,7 @@ class GameState:
     def update_food(self):
         check = np.all(self.snake == self.food_location, axis=1)
         if np.any(check):
-            self.food_location = np.random.randint(self.grid_size, dtype=np.int16)
+            self.food_location = np.random.randint(self.grid_size, dtype=np.uint16)
 
     @property
     def direction_vector(self):
@@ -67,20 +70,15 @@ class Renderer:
     def __init__(self, state: GameState):
         self.state = state
 
-        ratio = min(*(np.array(window_size) / state.grid_size))
-        real_size = state.grid_size * ratio
+        ws = np.array(window_size)
+        r = min(*(ws / state.grid_size))
+        rs = state.grid_size * r
 
-        self.cell_size = (
-            real_size - border_size * (state.grid_size + np.ones((2,)))
-        ) / state.grid_size
-        self.offset = (np.array(window_size) - real_size) / 2
+        self.cell_size = (rs - border_size * (state.grid_size + ONE)) / state.grid_size
+        self.offset = (ws - rs) / 2
 
     def _offset_for(self, x: int, y: int):
-        return (
-            self.offset
-            + (np.ones((2,)) * border_size)
-            + np.array([x, y]) * (self.cell_size + np.ones((2,)) * border_size)
-        )
+        return self.offset + BORDER + np.array([x, y]) * (self.cell_size + BORDER)
 
     def _draw_square(self, surface: pygame.Surface, x: int, y: int, color):
         pos = self._offset_for(x, y)
@@ -123,6 +121,8 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 is_running = False
+                continue
+
             if event.type == pygame.KEYDOWN and not did_change_direction:
                 if event.key == pygame.K_LEFT and state.direction != "right":
                     state.direction = "left"
