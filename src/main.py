@@ -82,9 +82,7 @@ class Renderer:
             + np.array([x, y]) * (self.cell_size + np.ones((2,)) * border_size)
         )
 
-    def _draw_square(
-        self, surface: pygame.Surface, x: int, y: int, color: tuple[int, int, int]
-    ):
+    def _draw_square(self, surface: pygame.Surface, x: int, y: int, color):
         pos = self._offset_for(x, y)
         rect = (pos[0], pos[1], self.cell_size[0], self.cell_size[1])
         pygame.draw.rect(surface, color, rect)
@@ -101,15 +99,11 @@ class Renderer:
             food_color,
         )
 
-        for y, x in self.state.snake:
-            self._draw_square(surface, x, y, snake_color)
-
-        self._draw_square(
-            surface,
-            int(self.state.snake[-1][1]),
-            int(self.state.snake[-1][0]),
-            snake_head_color,
-        )
+        start_color = np.array(snake_color)
+        end_color = np.array(snake_head_color)
+        diff = (end_color - start_color) / (len(self.state.snake) - 1)
+        for idx, (y, x) in enumerate(self.state.snake):
+            self._draw_square(surface, x, y, start_color + diff * idx)
 
         pygame.display.flip()
 
@@ -125,18 +119,23 @@ def main():
     clock = pygame.time.Clock()
     is_running = True
     while is_running:
+        did_change_direction = False
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 is_running = False
-            elif event.type == pygame.KEYDOWN:
+            if event.type == pygame.KEYDOWN and not did_change_direction:
                 if event.key == pygame.K_LEFT and state.direction != "right":
                     state.direction = "left"
+                    did_change_direction = True
                 elif event.key == pygame.K_RIGHT and state.direction != "left":
                     state.direction = "right"
+                    did_change_direction = True
                 elif event.key == pygame.K_UP and state.direction != "down":
                     state.direction = "up"
+                    did_change_direction = True
                 elif event.key == pygame.K_DOWN and state.direction != "up":
                     state.direction = "down"
+                    did_change_direction = True
 
         state.update()
         renderer.draw(window_surface)
